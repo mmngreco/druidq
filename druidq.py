@@ -1,4 +1,6 @@
+# ignore warnings from sqlalchemy and pandas
 import warnings
+
 warnings.filterwarnings("ignore")
 
 import pandas as pd
@@ -10,26 +12,91 @@ import os
 DRUIDQ_URL = os.environ.get("DRUIDQ_URL", "druid://localhost:8887/")
 
 
-def main(query):
-    print("Query:")
-    print(query)
+def get_query(args):
+    query_in = args.query
+    try:
+        with open(query_in, "r") as f:
+            out = f.read()
+    except FileNotFoundError:
+        out = query_in
+    return out
 
-    engine = create_engine(DRUIDQ_URL)
+
+def get_args():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Druid Query")
+    parser.add_argument("query", help="Druid query or filename")
+    parser.add_argument(
+        "-e",
+        "--eval-df",
+        help="Evaluate 'df' using string or filename",
+        default="",
+    )
+    return parser.parse_args()
+
+
+def get_eval_df(args):
+    eval_df_in = args.eval_df
+    try:
+        with open(eval_df_in, "r") as f:
+            out = f.read()
+    except FileNotFoundError:
+        out = eval_df_in
+    return out
+
+
+def get_temp_file(query):
+    from hashlib import sha1
+    from pathlib import Path
+
+    qhash = sha1(query.encode()).hexdigest()
+    temp_file = Path(f"/tmp/druidq/{qhash}.parquet")
+    if not temp_file.parent.exists():
+        temp_file.parent.mkdir(parents=True, exist_ok=True)
+
+    return temp_file
+
+
+def execute(query, engine):
+    # cache {{
+    temp_file = get_temp_file(query)
+    if temp_file.exists():
+        print(f"Loading cache: {temp_file}")
+        return pd.read_parquet(temp_file)
+    # }}
+
     df = pd.read_sql(query, engine)
 
-    print()
-    print("Out:")
-    print(df)
+    # cache {{
+    print(f"Saving cache: {temp_file}")
+    df.to_parquet(temp_file)
+    # }}
+
+    return df
 
 
 def app():
-    import sys
-    try:
-        with open(sys.argv[1], "r") as f:
-            query = f.read()
-    except FileNotFoundError:
-        query = sys.argv[1]
-    main(query)
+    args = get_args()
+    query = get_query(args)
+    print("In[query]:")
+    print(query)
+
+    engine = create_engine(DRUIDQ_URL)
+    df = execute(query, engine)
+
+    print()
+    print("Out[df]:")
+    print(df)
+
+    if args.eval_df:
+        eval_df = get_eval_df(args)
+        print()
+        print("In[eval]:")
+        print(eval_df)
+
+        print("Out[eval]:")
+        exec(eval_df, globals(), locals())
 
 
 if __name__ == "__main__":
