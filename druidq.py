@@ -33,6 +33,12 @@ def get_args():
         help="Evaluate 'df' using string or filename",
         default="",
     )
+    parser.add_argument(
+        "-n",
+        "--no-cache",
+        help="Do not use cache",
+        action="store_true",
+    )
     return parser.parse_args()
 
 
@@ -58,7 +64,10 @@ def get_temp_file(query):
     return temp_file
 
 
-def execute(query, engine):
+def execute(query, engine, no_cache=False):
+    if no_cache:
+        return pd.read_sql(query, engine)
+
     # cache {{
     temp_file = get_temp_file(query)
     if temp_file.exists():
@@ -83,7 +92,7 @@ def app():
     print(query)
 
     engine = create_engine(DRUIDQ_URL)
-    df = execute(query, engine)
+    df = execute(query, engine, args.no_cache)
 
     print()
     print("Out[df]:")
