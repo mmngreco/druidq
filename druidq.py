@@ -11,6 +11,9 @@ import os
 
 DRUIDQ_URL = os.environ.get("DRUIDQ_URL", "druid://localhost:8887/")
 
+def printer(*args, quiet=False, **kwargs):
+    if not quiet:
+        print(*args, **kwargs)
 
 def get_query(args):
     query_in = args.query
@@ -39,6 +42,12 @@ def get_args():
         help="Do not use cache",
         action="store_true",
     )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        help="Do not print the output except the code you use in eval-df",
+        action="store_true",
+    )
     return parser.parse_args()
 
 
@@ -64,21 +73,21 @@ def get_temp_file(query):
     return temp_file
 
 
-def execute(query, engine, no_cache=False):
+def execute(query, engine, no_cache=False, quiet=False):
     if no_cache:
         return pd.read_sql(query, engine)
 
     # cache {{
     temp_file = get_temp_file(query)
     if temp_file.exists():
-        print(f"Loading cache: {temp_file}")
+        printer(f"Loading cache: {temp_file}", quiet=quiet)
         return pd.read_parquet(temp_file)
     # }}
 
     df = pd.read_sql(query, engine)
 
     # cache {{
-    print(f"Saving cache: {temp_file}")
+    printer(f"Saving cache: {temp_file}", quiet=quiet)
     df.to_parquet(temp_file)
     # }}
 
@@ -88,23 +97,24 @@ def execute(query, engine, no_cache=False):
 def app():
     args = get_args()
     query = get_query(args)
-    print("In[query]:")
-    print(query)
+    quiet = args.quiet
+    printer("In[query]:", quiet=quiet)
+    printer(query, quiet=quiet)
 
     engine = create_engine(DRUIDQ_URL)
-    df = execute(query, engine, args.no_cache)
+    df = execute(query, engine, args.no_cache, quiet=quiet)
 
-    print()
-    print("Out[df]:")
-    print(df)
+    printer(quiet=quiet)
+    printer("Out[df]:", quiet=quiet)
+    printer(df, quiet=quiet)
 
     if args.eval_df:
         eval_df = get_eval_df(args)
-        print()
-        print("In[eval]:")
-        print(eval_df)
+        printer(quiet=quiet)
+        printer("In[eval]:", quiet=quiet)
+        printer(eval_df, quiet=quiet)
 
-        print("Out[eval]:")
+        printer("Out[eval]:", quiet=quiet)
         exec(eval_df, globals(), locals())
 
 
