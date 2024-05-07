@@ -11,9 +11,18 @@ import os
 
 DRUIDQ_URL = os.environ.get("DRUIDQ_URL", "druid://localhost:8887/")
 
+
 def printer(*args, quiet=False, **kwargs):
     if not quiet:
         print(*args, **kwargs)
+
+
+def find_fmt_keys(s: str) -> list[str] | None:
+    import re
+    pattern = r"{[^}]+}"
+    matches = re.findall(pattern, s)
+    return matches
+
 
 def get_query(args):
     query_in = args.query
@@ -22,6 +31,16 @@ def get_query(args):
             out = f.read()
     except FileNotFoundError:
         out = query_in
+
+    # format {{{
+    fmt_keys = find_fmt_keys(out)
+    if fmt_keys:
+        fmt_values = {}
+        for key in fmt_keys:
+            k = key[1:-1]
+            fmt_values[k] = os.environ[k]
+        out = out.format(**fmt_values)
+    # }}}
     return out
 
 
