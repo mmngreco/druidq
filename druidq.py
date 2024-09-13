@@ -10,7 +10,6 @@ import os
 
 
 DRUIDQ_URL = os.environ.get("DRUIDQ_URL", "druid://localhost:8887/")
-engine = create_engine(DRUIDQ_URL)
 
 
 def printer(*args, quiet=False, **kwargs):
@@ -93,7 +92,10 @@ def get_temp_file(query):
     return temp_file
 
 
-def execute(query, engine=engine, no_cache=False, quiet=False):
+def execute(query, engine=None, no_cache=False, quiet=False):
+    if engine is None:
+        engine = create_engine(DRUIDQ_URL)
+
     if no_cache:
         return pd.read_sql(query, engine)
 
@@ -108,7 +110,10 @@ def execute(query, engine=engine, no_cache=False, quiet=False):
 
     # cache {{
     printer(f"Saving cache: {temp_file}", quiet=quiet)
-    df.to_parquet(temp_file)
+    try:
+        df.to_parquet(temp_file)
+    except Exception as e:
+        printer(f"Error saving cache: {e}", quiet=quiet)
     # }}
 
     return df
