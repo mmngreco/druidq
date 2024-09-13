@@ -10,6 +10,7 @@ import os
 
 
 DRUIDQ_URL = os.environ.get("DRUIDQ_URL", "druid://localhost:8887/")
+engine = create_engine(DRUIDQ_URL)
 
 
 def printer(*args, quiet=False, **kwargs):
@@ -92,7 +93,7 @@ def get_temp_file(query):
     return temp_file
 
 
-def execute(query, engine, no_cache=False, quiet=False):
+def execute(query, engine=engine, no_cache=False, quiet=False):
     if no_cache:
         return pd.read_sql(query, engine)
 
@@ -120,7 +121,6 @@ def app():
     printer("In[query]:", quiet=quiet)
     printer(query, quiet=quiet)
 
-    engine = create_engine(DRUIDQ_URL)
     df = execute(query, engine, args.no_cache, quiet=quiet)
 
     printer(quiet=quiet)
