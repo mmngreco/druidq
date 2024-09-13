@@ -126,7 +126,7 @@ def app():
     printer("In[query]:", quiet=quiet)
     printer(query, quiet=quiet)
 
-    df = execute(query, engine, args.no_cache, quiet=quiet)
+    df = execute(query, no_cache=args.no_cache, quiet=quiet)
 
     printer(quiet=quiet)
     printer("Out[df]:", quiet=quiet)

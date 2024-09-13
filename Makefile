@@ -1,5 +1,5 @@
 # variables
-PYVER  := 3.10
+PYVER  := 3.11
 venv   := .venv
 python := $(venv)/bin/python
 pip    := $(venv)/bin/pip
@@ -13,23 +13,7 @@ help:  ## Display this help
 
 ##@ Setup
 $(venv):
-	@if [ -x "`command -v conda`" ]; then \
-		conda create --prefix $(venv) python=$(PYVER) -y -q; \
-	else \
-		python$(PYVER) -m venv $(venv); \
-	fi
-
-
-.PHONY: install
-install: $(venv)  ## install
-	$(pip) install . -r requirements.txt
-
-
-.PHONY: push
-push: tag ## push to origin a new tag, e.g. make push v=<version>
-	git push origin main
-	git push --tags
-
+	python$(PYVER) -m venv $(venv);
 
 ##@ Development
 .PHONY: dev
